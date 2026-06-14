@@ -6,9 +6,10 @@
 
 [![Python](https://img.shields.io/badge/Python-3.12+-blue.svg?logo=python)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.136.1-green.svg?logo=fastapi)](https://fastapi.tiangolo.com)
+<img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License">
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-blue.svg?logo=postgresql)](https://postgresql.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-brightgreen.svg?logo=docker)](https://docker.com)
-[![Tests](https://img.shields.io/badge/tests-12%20passed-success.svg)](#-тестирование)
+[![Tests](https://img.shields.io/badge/tests-18%20passed-success.svg)](#-тестирование)
 
 [🚀 Быстрый старт](#-быстрый-старт) •
 [📋 API Документация](#-api-эндпоинты) •
@@ -49,7 +50,8 @@
 
 ### Swagger UI — Автоматическая документация API
 ![Swagger UI](assets/screenshots/swagger_ui.png)
-> *Все эндпоинты доступны с интерактивной документацией*
+> *Пример всех эндпоинтов доступны с интерактивной документацией*
+
 ## 🧪 Тестирование
 ```bash
 # Все тесты
@@ -66,7 +68,7 @@ pytest --cov=coffee_backend
 ```
 ### Результаты тестирования
 ![Tests](assets/screenshots/test.png)
-> *12 тестов проходят за ~3.5 секунды*
+> *18 тестов проходят за ~23.5 секунды(с учётом создания БД)*
 
 ---
 
@@ -84,51 +86,27 @@ pytest --cov=coffee_backend
 | Тестирование        | pytest, pytest-asyncio, httpx |
 | Асинхронный драйвер | asyncpg                       |
 | ASGI сервер         | Uvicorn                       |
+| Хеширование паролей | Argon2                        |
 
 ---
 
 ## 🏗 Архитектура проекта
 ```
-📁 coffee_backend/                  # Основной пакет приложения
-│
-├── 📁 app/
-│   ├── 📁 models/                    # SQLAlchemy модели (async)
-│   │   ├── 📄 base.py
-│   │   └── 📄 models.py
-│   │
-│   ├── 📁 routers/                 # API эндпоинты
-│   │   ├── 📄 admin.py             # Админ-панель
-│   │   ├── 📄 loyalty.py           # Программа лояльности
-│   │   ├── 📄 menu.py              # Меню
-│   │   └── 📄 orders.py            # Заказы
-│   │
-│   ├── 📁 services/                # Бизнес-логика
-│   │   ├── 📄 inventory.py         # Управление складом
-│   │   ├── 📄 loyalty_services.py  # Логика лояльности
-│   │   ├── 📄 order_services.py    # Создание заказов
-│   │   └── 📄 pricing.py           # Динамическое ценообразование
-│   │
-│   ├── 📁 exception/               # Кастомные исключения
-│   ├── 📄 config.py                # Конфигурация приложения
-│   ├── 📄 database.py              # Подключение к БД
-│   ├── 📄 schemas.py               # Pydantic v2 валидация
-│   └── 📄 main.py                  # Точка входа FastAPI
-│
-├── 📁 alembic/                     # Миграции БД
-├── 📄 alembic.ini
-│
-├── 📁 tests/                       # Тесты
-│   ├── 📄 conftest.py
-│   ├── 📄 factories.py
-│   ├── 📄 test_admin.py
-│   ├── 📄 test_menu.py
-│   ├── 📄 test_orders.py
-│   └── 📄 test_services.py
-│
-├── 📄 DockerFile                   # Docker образ приложения
-├── 📄 docker-compose.yml           # Оркестрация сервисов
-├── 📄 requirements.txt             # Зависимости Python
-└── 📄 pytest.ini                   # Конфигурация pytest
+├── coffee_backend/          # Основной пакет приложения
+│   ├── app/                 # Модули приложения
+│   │   ├── models/          # SQLAlchemy модели (async)[reference:35]
+│   │   ├── routers/         # API эндпоинты (админка, лояльность, меню, заказы)[reference:36]
+│   │   ├── services/        # Бизнес-логика (склад, лояльность, заказы, цены)[reference:37]
+│   │   └── exception/       # Кастомные исключения[reference:38]
+│   ├── config.py            # Конфигурация приложения[reference:39]
+│   ├── database.py          # Подключение к БД[reference:40]
+│   ├── schemas.py           # Pydantic v2 валидация[reference:41]
+│   └── main.py              # Точка входа FastAPI[reference:42]
+├── alembic/                 # Миграции БД[reference:43]
+├── tests/                   # Тесты (12 тестов проходят за ~3.5 секунды)[reference:44]
+├── Dockerfile               # Docker образ приложения[reference:45]
+├── docker-compose.yml       # Оркестрация сервисов[reference:46]
+└── requirements.txt         # Зависимости Python[reference:47]
 ```
 
 ---
@@ -248,7 +226,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 | ----- | ------------------------ | -------------------------------- |
 | GET   | /loyalty/cards/{card_id} | Получить детали карты лояльности |
 | POST  | /loyalty/redeem          | Обменять баллы на скидку         |
-|       |                          |                                  |
+| GET   | /loyalty/me              | Получение карты лояльности текущего пользователя|
 
 **GET** /loyalty/cards/{card_id} — ответ:
 
@@ -285,11 +263,49 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 | POST  | /admin/ingredients/{ingredient_id}/stock | Обновить остаток ингредиента    |
 | POST  | /admin/pricing-rules                     | Создать правило ценообразования |
 | POST  | /admin/loyalty-cards                     | Выдать карту лояльности         |
---------------------------------------------------------------------------
+| GET   | /admin/users                             | Получить список пользователей   |
+| PATCH | /admin/users/{user_id}/status            | Изменить статус пользователя    |
 
 **Примеры запросов – смотрите в автоматической документации <hred src=http://localhost:8000/docs>.** 
-
 ---
+
+### 🗝 Аутентификация 
+
+|Метод | Эндпоинт                 | Описание                |
+|------|------------------------- |-------------------------|       
+| POST | /auth/registration       | Создание аккаунта       |
+| POST | /auth/login              | Вход по логину и паролю |
+| POST | /auth/login/totp         | Второй шаг логина с TOTP(изначально выключен)|
+| POST | /auth/logout             | Завершение сесси и удаление куки| 
+| POST | /auth/session/refresh    | Продление сессии        |
+| GET  | /auth/me                 | Получение информации о текущем пользовател|
+
+**Примеры запросов – смотрите в автоматической документации <hred src=http://localhost:8000/docs>.** 
+---
+
+### 🛡 Безопасность 
+
+|Метод | Эндпоинт                 | Описание                                         |
+|------|------------------------- |--------------------------------------------------|
+| POST | /totp/setup              | Настройка TOTP (2FA)(Подбробнее в документации)  |
+| POST | /totp/verify             | Верификация TOTP кода для подтверждения настройки|
+| POST | /totp/disable            | Отключение TOTP                                  |
+| GET  | /totp/status             | Получение статуса TOTP для текущего пользователя | 
+
+**Примеры запросов – смотрите в автоматической документации <hred src=http://localhost:8000/docs>.** 
+---
+
+### Сброс пароля ⛓
+
+|Метод | Эндпоинт                 | Описание                                         |
+|------|------------------------- |--------------------------------------------------|
+| POST | /forgot-password         | Инициация сброса пароля                          | 
+| POST | /verify-reset-code       | Проверяет 6-значный код из email.                | 
+| POST | /reset-password          | Сброс пароля после успешной верификации.         |
+| POST | /reset-password-by-code  | Сброс пароля по 6-значному коду из email.        |
+| POST | /send-otp-reset          | Альтернативный метод: отправка OTP кода только для проверки.|
+
+
 ## 🏗 Модели данных (БД)
 
 | Таблица       | Описание                              |
