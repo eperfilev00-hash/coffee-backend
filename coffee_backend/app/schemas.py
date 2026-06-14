@@ -1,7 +1,7 @@
 from decimal import Decimal
 import datetime
 from typing import Optional, List, Annotated
-from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, field_serializer
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, PlainSerializer, field_serializer
 
 
 
@@ -13,6 +13,109 @@ DecimalAsFloat = Annotated[
 ]
 
 
+
+class UserCreate(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr
+    password: str = Field(..., min_length=8)
+    control_question:str
+    answer:str 
+
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    email: str
+    is_active: bool
+    created_at: datetime.datetime
+
+    
+    model_config = ConfigDict(from_attributes=True)
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+class LoginResponse(BaseModel):
+    """Ответ для успешного входа без 2FA"""
+    user: UserResponse
+    
+class Login2FARequired(BaseModel):
+    """Ответ когда требуется 2FA"""
+    temporary_token: str
+    message: str = "2FA code required"
+
+class Token(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+
+class TokenData(BaseModel):
+    username: Optional[str] = None
+    user_id: Optional[int] = None
+
+class RefreshTokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+
+class ChangePasswordRequest(BaseModel):
+    old_password:str
+    new_password:str
+
+class ForgorPasswordRequest(BaseModel):
+    email:EmailStr
+    
+class TOTPSetupRequest(BaseModel):
+    """Запрос на настройку TOTP."""
+    password: str  # Требует пароль для подтверждения
+
+class TOTPSetupResponse(BaseModel):
+    """Ответ с секретом и QR-кодом."""
+    secret: str
+    qr_uri: str
+    manual_entry_code: str
+
+class TOTPVerifyRequest(BaseModel):
+    """Запрос на верификацию TOTP кода."""
+    token: str
+
+class EnableTOTPRequest(BaseModel):
+    """Запрос на включение TOTP после верификации."""
+    token: str  # Код для подтверждения при включении
+
+class TOTPLoginRequest(BaseModel):
+    """Запрос на вход с TOTP кодом (второй шаг)."""
+    temporary_token: str  # Временный токен из первого шага
+    totp_code: str
+
+class ForgotPasswordRequest(BaseModel):
+    """Запрос на инициацию сброса пароля."""
+    email: EmailStr
+
+class VerifyResetCodeRequest(BaseModel):
+    """Запрос на проверку кода сброса."""
+    email: EmailStr
+    code: str = Field(..., min_length=6, max_length=6, pattern=r'^\d{6}$')
+
+class ResetPasswordRequest(BaseModel):
+    """Запрос на сброс пароля после верификации."""
+    token: str = Field(..., min_length=10)  # Токен из URL
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+class ResetPasswordByCodeRequest(BaseModel):
+    """Запрос на сброс пароля по коду."""
+    email: EmailStr
+    code: str = Field(..., min_length=6, max_length=6, pattern=r'^\d{6}$')
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+class ResetPasswordResponse(BaseModel):
+    """Ответ на успешный сброс пароля."""
+    success: bool
+    message: str
+
+class VerifyCodeResponse(BaseModel):
+    """Ответ на проверку кода."""
+    verified: bool
+    message: str
 
 class MenuItemResponse(BaseModel):
     id: int
@@ -144,5 +247,3 @@ class RecipeResponse(BaseModel):
     ingredients: List[RecipeContent]
     
     model_config = ConfigDict(from_attributes=True)
-
-

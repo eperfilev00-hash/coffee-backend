@@ -3,14 +3,14 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from coffee_backend.app.models.models import LoyaltyCard, MenuItem, Order, OrderItem
+from coffee_backend.app.models.models import LoyaltyCard, MenuItem, Order, OrderItem, User
 from coffee_backend.app.schemas import OrderCreateRequest, OrderResponse, OrderItemResponse
 from coffee_backend.app.services.inventory import check_and_reserve_stock
 from coffee_backend.app.services.loyalty_services import calculate_final_price, get_tier_discount, recalc_tier
 from coffee_backend.app.services.pricing import get_current_multiplier
 
 
-async def create_order(db_session: AsyncSession, order_data: OrderCreateRequest) -> OrderResponse:
+async def create_order(db_session: AsyncSession, order_data: OrderCreateRequest,current_user:User) -> OrderResponse:
         # 1. Проверить дубликаты menu_item_id
         seen_items = set()
         for item in order_data.items:
@@ -59,18 +59,18 @@ async def create_order(db_session: AsyncSession, order_data: OrderCreateRequest)
         card = None
         
         if order_data.card_id:
-            if order_data.card_id < 0:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                    detail="card_id не может быть отрицательным"
-                )
-            
             result = await db_session.execute(
                 select(LoyaltyCard).where(LoyaltyCard.id == order_data.card_id)
             )
             card = result.scalar_one_or_none()
             if not card:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Карта не найдена")
+                raise HTTPException(status_code=404, detail="Card not found")
+            
+            if card.user_id and card.user_id != current_user.id and not current_user.is_superuser:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Not authorized to use this loyalty card"
+                )
         
             # get_tier_discount возвращает TierDetailsResponse, извлекаем значения
             tier_info = await get_tier_discount(db_session, card)

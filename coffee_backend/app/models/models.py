@@ -1,5 +1,6 @@
 import datetime
 from decimal import Decimal
+import secrets
 from typing import Optional
 
 from pydantic import Field
@@ -8,6 +9,88 @@ from sqlalchemy.orm import mapped_column,Mapped, relationship
 from coffee_backend.app.models.base import Base
 
 
+class User(Base):
+    __tablename__ = 'users'
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    control_question: Mapped[str] = mapped_column(String(255), nullable=False)
+    answer: Mapped[str] = mapped_column(String(255), nullable=False)
+    
+    totp_secret: Mapped[str | None] = mapped_column(String(255), nullable=True)  
+    totp_secret_pending: Mapped[str] = mapped_column(String(255), nullable=True)
+    totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now()
+    )
+
+    loyalty_card = relationship("LoyaltyCard", back_populates="user", uselist=False)
+    reset_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    reset_token_expires: Mapped[Optional[datetime.datetime]] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=True
+    )
+    
+    __table_args__ = (
+        CheckConstraint('username != \'\'', name='check_mapped_username_not_empty'),
+        CheckConstraint('email LIKE \'%@%\'', name='check_email_valid'),
+    )
+
+class Session(Base):
+    __tablename__ = "sessions"
+    
+    id: Mapped[int] = mapped_column(primary_key=True,autoincrement=True,nullable=False)
+    session_id: Mapped[str] = mapped_column(String(255),unique=True,index=True,nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'),nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now()
+    ) 
+    expires_at:Mapped[datetime.datetime] = mapped_column(TIMESTAMP(timezone=True),nullable=False)
+    is_active:Mapped[bool] = mapped_column(default=True,nullable=False)
+    is_pending:Mapped[bool] = mapped_column(default=False,nullable=False)  # Для ожидания 2FA
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45),nullable=True)
+    user_agent: Mapped[Optional[str]] = mapped_column(String(255),nullable=True)
+
+class PasswordResetToken(Base):
+    """Модель для токенов сброса пароля."""
+    __tablename__ = "password_reset_tokens"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    token_hash: Mapped[str] = mapped_column(String(255), nullable=False, index=True)  # Хеш токена (не сам токен)
+    code: Mapped[str] = mapped_column(String(6), nullable=False)  # 6-значный код для SMS/email
+    expires_at: Mapped[datetime.datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now()
+    )
+    
+    user = relationship("User", backref="password_reset_tokens")
+    
+    __table_args__ = (
+        # Индекс для быстрого поиска не использованных токенов
+        Index('idx_token_hash_used_expires', 'token_hash', 'used', 'expires_at'),
+    )
+    
+    @classmethod
+    def generate_token(cls) -> tuple[str, str]:
+        """
+        Генерирует безопасный токен и код.
+        
+        Returns:
+            tuple: (raw_token, code) - токен для URL и 6-значный код
+        """
+        # Генерируем криптографически безопасный токен
+        raw_token = secrets.token_urlsafe(32)  # 256 бит
+        
+        # Генерируем 6-значный код для email/SMS
+        code = ''.join([str(secrets.randbelow(10)) for _ in range(6)])
+        
+        return raw_token, code
+    
 
 class Ingredient(Base):
     __tablename__ = "ingredients"
@@ -55,11 +138,14 @@ class PricingRule(Base):
 
 class LoyaltyCard(Base):
     __tablename__ = 'loyalty_cards'
-    id:Mapped[int] = mapped_column(Integer,primary_key=True,autoincrement=True)
-    customer_name:Mapped[str] = mapped_column(String(200),nullable=False)
-    points_balance:Mapped[int] = mapped_column(Integer,default=0, nullable=False)
-    tier:Mapped[str] = mapped_column(String(20),default='bronze', nullable=False)
-
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('users.id'), unique=True, nullable=True)
+    customer_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    points_balance: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    tier: Mapped[str] = mapped_column(String(20), default='bronze', nullable=False)
+    
+    user = relationship("User", back_populates="loyalty_card")
+    
     __table_args__ = (
         CheckConstraint('points_balance >= 0', name='check_points_balance_positive'),
     )

@@ -20,7 +20,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile  
+      dockerfile: Dockerfile
     container_name: coffee-api
     ports:
       - "8000:8000"
@@ -28,6 +28,11 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql+asyncpg://myuser:mypassword@db:5432/mydb
+      # Настройки логирования
+      LOG_LEVEL: INFO          # DEBUG, INFO, WARNING, ERROR
+      LOG_FORMAT: console      # console (rich) или json (production)
+      # Настройки для улучшенного отображения логов
+      TERM: xterm-256color
     depends_on:
       db:
         condition: service_healthy
@@ -36,6 +41,18 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    # ──────────────────────────────────────────────────────
+    # Добавлено для улучшения отображения логов
+    tty: true
+    stdin_open: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # ──────────────────────────────────────────────────────
+    volumes:
+      - .:/app  # Если нужно монтирование кода
 
 volumes:
   postgres-data:

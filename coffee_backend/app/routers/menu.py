@@ -8,7 +8,7 @@ from coffee_backend.app.models.models import MenuItem
 from coffee_backend.app.schemas import MenuItemResponse
 from coffee_backend.app.services.pricing import get_current_multiplier
 
-router = APIRouter()
+router = APIRouter(tags=['Меню'])
 
 @router.get("/menu", response_model=list[MenuItemResponse],status_code=status.HTTP_200_OK)
 async def get_menu(db: AsyncSession = Depends(get_db)):
