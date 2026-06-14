@@ -318,6 +318,8 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 | loyalty_tiers | Уровни программы лояльности           |
 | orders        | Заказы                                |
 | order_items   | Позиции заказов                       |
+| users          | Пользователи и их данные|
+| session       | Сессии пользователей              |
 ---
 ---
 📝 Лицензия
