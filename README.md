@@ -92,21 +92,64 @@ pytest --cov=coffee_backend
 
 ## 🏗 Архитектура проекта
 ```
-├── coffee_backend/          # Основной пакет приложения
-│   ├── app/                 # Модули приложения
-│   │   ├── models/          # SQLAlchemy модели (async)[reference:35]
-│   │   ├── routers/         # API эндпоинты (админка, лояльность, меню, заказы)[reference:36]
-│   │   ├── services/        # Бизнес-логика (склад, лояльность, заказы, цены)[reference:37]
-│   │   └── exception/       # Кастомные исключения[reference:38]
-│   ├── config.py            # Конфигурация приложения[reference:39]
-│   ├── database.py          # Подключение к БД[reference:40]
-│   ├── schemas.py           # Pydantic v2 валидация[reference:41]
-│   └── main.py              # Точка входа FastAPI[reference:42]
-├── alembic/                 # Миграции БД[reference:43]
-├── tests/                   # Тесты (12 тестов проходят за ~3.5 секунды)[reference:44]
-├── Dockerfile               # Docker образ приложения[reference:45]
-├── docker-compose.yml       # Оркестрация сервисов[reference:46]
-└── requirements.txt         # Зависимости Python[reference:47]
+├── .dockerignore
+├── .env.example
+├── assets/
+│   └── screenshots/
+├── coffee_backend/
+│   ├── alembic/                  # Миграции БД
+│   ├── alembic.ini
+│   └── app/
+│       ├── main.py               # Точка входа FastAPI
+│       ├── config.py             # Конфигурация приложения
+│       ├── database.py           # Подключение к БД (asyncpg + SQLAlchemy 2.0)
+│       ├── schemas.py            # Pydantic v2 схемы валидации
+│       ├── models/               # SQLAlchemy модели
+│       ├── routers/              # API эндпоинты
+│       │   ├── auth.py           # Аутентификация (регистрация, логин)
+│       │   ├── admin.py          # Админка
+│       │   ├── loyalty.py        # Программа лояльности
+│       │   ├── menu.py           # Управление меню
+│       │   ├── orders.py         # Заказы
+│       │   ├── password.py       # Сброс пароля
+│       │   └── security.py       # TOTP / 2FA
+│       ├── services/             # Бизнес-логика
+│       │   ├── inventory.py      # Управление складом
+│       │   ├── loyalty_services.py # Лояльность (расчёт скидок, баллов)
+│       │   ├── order_services.py # Создание и обработка заказов
+│       │   ├── pricing.py        # Динамическое ценообразование
+│       │   ├── email_service.py  # Отправка email
+│       │   └── password_reset_service.py # Сброс пароля
+│       ├── auth/                 # Модуль аутентификации
+│       │   ├── dependencies.py   # Зависимости FastAPI (get_current_user и т.д.)
+│       │   ├── hash.py           # Хеширование паролей (Argon2)
+│       │   ├── totp.py           # TOTP-генерация/верификация
+│       │   └── deps/
+│       │       └── rate_limit.py # Rate limiting
+│       ├── core/
+│       │   └── redis.py          # Redis (кэш / rate limit)
+│       ├── exception/
+│       │   ├── exceptions.py     # Кастомные исключения
+│       │   └── exception_handlers.py # Обработчики
+│       └── logs/
+│           └── logger.py         # Логирование
+├── tests/                        # pytest-тесты
+│   ├── conftest.py
+│   ├── admin_test.py
+│   ├── test_auth.py
+│   ├── test_menu.py
+│   ├── order_test.py
+│   ├── loyalty_test.py
+│   ├── totp_test.py
+│   ├── password_reset_test.py
+│   └── edge_cases_and_erroe_hand.py
+├── docker-compose.yml
+├── Dockerfile
+├── entrypoint.sh
+├── LICENSE
+├── pytest.ini
+├── README.md
+└── requirements.txt
 ```
 
 ---
